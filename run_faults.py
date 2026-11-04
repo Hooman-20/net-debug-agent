@@ -5,11 +5,12 @@ Writes results.md and the full transcript of each run to eval_logs/<fault>.log.
 
 Usage (inside WSL, lab up, MODEL_API_KEY set):
   python run_faults.py                 # all faults
-  python run_faults.py loss dns        # just some
+  python run_faults.py mtu            # just one (or several); only those rows are updated
 """
 import contextlib
 import io
 import os
+import re
 import subprocess
 import sys
 import time
@@ -72,31 +73,75 @@ def run_case(fault, request, expected):
             "correct": r.get("category") == expected, "expected": expected}
 
 
-def write_results(rows):
+HEADER = [
+    "# Fault-injection results",
+    "",
+    "Model: Meta Muse Spark 1.3 (Meta Model API). Run: (time). Score: **0/0**.",
+    "",
+    "Each run: `lab/fault.sh <fault>`, then the full agent (discovery, generate script, run, explain) "
+    "with scripts auto-approved. *Correct* means the agent's CATEGORY matched the injected fault "
+    "(expected category in brackets). Full transcripts: `eval_logs/<fault>.log`.",
+    "",
+    "| Fault | Request | What the agent said | Correct |",
+    "|---|---|---|---|",
+]
+ROW = re.compile(r"^\| (\w+) \[")
+
+
+def row_line(r):
     esc = lambda s: s.replace("|", "\\|").replace("\n", " ")
-    lines = [
-        "# Fault-injection results",
-        "",
-        f"Model: Meta Muse Spark 1.3 (Meta Model API). Run: {time.strftime('%Y-%m-%d %H:%M')}. "
-        f"Score: **{sum(r['correct'] for r in rows)}/{len(rows)}**.",
-        "",
-        "Each run: `lab/fault.sh <fault>`, then the full agent (discovery, generate script, run, explain) "
-        "with scripts auto-approved. *Correct* means the agent's CATEGORY matched the injected fault "
-        "(expected category in brackets). Full transcripts: `eval_logs/<fault>.log`.",
-        "",
-        "| Fault | Request | What the agent said | Correct |",
-        "|---|---|---|---|",
-    ]
-    for r in rows:
-        lines.append(f"| {r['fault']} [{r['expected']}] | {esc(r['request'])} | {esc(r['said'])} | "
-                     f"{'yes' if r['correct'] else 'no'} |")
+    return (f"| {r['fault']} [{r['expected']}] | {esc(r['request'])} | {esc(r['said'])} | "
+            f"{'yes' if r['correct'] else 'no'} |")
+
+
+def merge_rows(lines, rows):
+    """Replace the table rows for the faults in `rows`; leave every other row as it is.
+    Then recompute the score and timestamp from the whole table."""
+    new = {r["fault"]: row_line(r) for r in rows}
+    out, seen, last_row = [], set(), None
+    for line in lines:
+        m = ROW.match(line)
+        if m and m.group(1) in new:
+            line = new[m.group(1)]
+            seen.add(m.group(1))
+        out.append(line)
+        if line.startswith("|"):
+            last_row = len(out)
+    missing = [new[f] for f, _, _ in CASES if f in new and f not in seen]
+    if missing:
+        at = last_row if last_row is not None else len(out)
+        out[at:at] = missing
+    table = [l for l in out if ROW.match(l)]
+    done = [l for l in table if l.rstrip().endswith(("| yes |", "| no |"))]
+    score = f"Score: **{sum(l.rstrip().endswith('| yes |') for l in done)}/{len(done)}**"
+    when = time.strftime("%Y-%m-%d %H:%M")
+    if len(rows) < len(CASES):
+        when += f" (updated: {', '.join(r['fault'] for r in rows)})"
+    for i, l in enumerate(out):
+        if "Score:" in l:
+            l = re.sub(r"Score: \*\*\d+/\d+\*\*", score, l)
+            l = re.sub(r"(Run|Last updated): .*?\. ", f"Last updated: {when}. ", l, count=1)
+            l = l.replace("**Not run yet.** ", "")
+            out[i] = l
+    return out
+
+
+def write_results(rows):
+    """Update only the rows for the faults in `rows`, in results.md and the README table."""
+    lines = HEADER
+    if os.path.exists(RESULTS):
+        with open(RESULTS) as f:
+            lines = f.read().splitlines()
+        if not any("Score:" in l for l in lines):  # old placeholder file: start from the template
+            lines = HEADER + [l for l in lines if ROW.match(l)]
+    lines = merge_rows(lines, rows)
     with open(RESULTS, "w") as f:
         f.write("\n".join(lines) + "\n")
-    update_readme(lines[2:])
+    update_readme(rows)
 
 
-def update_readme(block):
-    """Replace the text between the RESULTS markers in README.md with the new table."""
+def update_readme(rows):
+    """Update only those rows in the table between the RESULTS markers in README.md."""
     path = os.path.join(HERE, "README.md")
     start, end = "<!-- RESULTS START -->", "<!-- RESULTS END -->"
     if not os.path.exists(path):
@@ -106,7 +151,11 @@ def update_readme(block):
     if start not in text or end not in text:
         return
     head, rest = text.split(start, 1)
-    tail = rest.split(end, 1)[1]
+    block, tail = rest.split(end, 1)
+    block = block.strip("\n").splitlines()
+    if not any("Score:" in l for l in block):
+        block = HEADER[2:] + [l for l in block if ROW.match(l)]
+    block = merge_rows(block, rows)
     with open(path, "w") as f:
         f.write(f"{head}{start}\n" + "\n".join(block) + f"\n{end}{tail}")
 

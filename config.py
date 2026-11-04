@@ -22,6 +22,7 @@ TOOL_PORT = 5001
 
 # Generated tools
 TOOL_TIMEOUT = 30         # seconds, hard kill
+SCRIPT_MAX_TOKENS = 16000  # reply budget for writing a script (reasoning tokens count against it)
 RUN_AS_USER = os.environ.get("SUDO_USER") or os.environ.get("USER") or "nobody"  # tools never run as root
 TOOLS_DIR = os.environ.get("AGENT_TOOLS_DIR") or os.path.join(os.path.dirname(os.path.abspath(__file__)), "tools")
 

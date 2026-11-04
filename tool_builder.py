@@ -11,8 +11,8 @@ import subprocess
 import sys
 import time
 
-from config import (LOCAL_IP, NAMESPACE, PEER_IP, PEER_NAMESPACE, RUN_AS_USER, SUMMARY_FILE,
-                    TOOL_PORT, TOOL_TIMEOUT, TOOLS_DIR)
+from config import (LOCAL_IP, NAMESPACE, PEER_IP, PEER_NAMESPACE, RUN_AS_USER, SCRIPT_MAX_TOKENS,
+                    SUMMARY_FILE, TOOL_PORT, TOOL_TIMEOUT, TOOLS_DIR)
 from model import ask_model
 
 SYSTEM_PROMPT = f"""You write small Python 3 network test scripts for a Linux system.
@@ -165,7 +165,7 @@ def ask_for_tool(request, summary):
         {"role": "system", "content": SYSTEM_PROMPT},
         {"role": "user", "content": f"System summary:\n{summary}\n\nRequest: {request}"},
     ]
-    reply = ask_model(messages)
+    reply = ask_model(messages, max_tokens=SCRIPT_MAX_TOKENS)
     return messages + [{"role": "assistant", "content": reply}], reply
 
 
@@ -173,7 +173,7 @@ def ask_for_fix(messages, output):
     messages = messages + [{"role": "user", "content":
         f"The script failed. Output and error:\n{output[-3000:]}\n\n"
         "Fix it. Reply in the same format (TYPE, NAME, code block) with the full fixed script."}]
-    return ask_model(messages)
+    return ask_model(messages, max_tokens=SCRIPT_MAX_TOKENS)
 
 
 def approve_and_run(path, tool_type, code, auto_approve=False):
