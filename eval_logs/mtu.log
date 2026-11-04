@@ -1,0 +1,54 @@
+##### FAULT: mtu   expected: MTU problem
+##### REQUEST: find the largest MTU that works from ns1 to ns2
+
+### 1. Discovery
+[1/10] $ uname -a
+    Linux DESKTOP-QHG906B 6.6.87.2-microsoft-standard-WSL2 #1 SMP PREEMPT_DYNAMIC Thu Jun  5 18:30:46 UTC 2025 x86_64 x86_64 x86_64 GNU/Linux
+    
+    [exit code 0]
+[2/10] $ ip addr
+    1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+        link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+        inet 127.0.0.1/8 scope host lo
+           valid_lft forever preferred_lft forever
+        inet6 ::1/128 scope host 
+           valid_lft forever preferred_lft forever
+    4: veth1@if3: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP group default qlen 1000
+        link/ether 7e:cb:94:67:ec:3e brd ff:ff:ff:ff:ff:ff link-netns ns2
+        inet 10.0.0.1/24 scope global veth1
+           valid_lft forever preferred_lft fo
+[3/10] $ ip route
+    10.0.0.0/24 dev veth1 proto kernel scope link src 10.0.0.1 
+    
+    [exit code 0]
+[4/10] $ cat /etc/resolv.conf
+    nameserver 10.0.0.2
+    
+    [exit code 0]
+[5/10] $ which ping dig iperf3 tc ss ethtool python3 nc traceroute tcpdump
+    /usr/bin/ping
+    /usr/bin/dig
+    /usr/sbin/tc
+    /usr/bin/ss
+    /usr/sbin/ethtool
+    /usr/bin/python3
+    /usr/bin/nc
+    
+    [exit code 1]
+
+=== System summary (5 commands, namespace ns1) ===
+OS: Linux DESKTOP-QHG906B 6.6.87.2-microsoft-standard-WSL2 x86_64 GNU/Linux
+Interfaces: lo MTU 65536 LOOPBACK UP; veth1@if3 MTU 1500 BROADCAST MULTICAST UP
+IPs: lo 127.0.0.1/8, ::1/128; veth1 10.0.0.1/24, fe80::7ccb:94ff:fe67:ec3e/64
+Routes: 10.0.0.0/24 dev veth1 scope link src 10.0.0.1
+DNS: nameserver 10.0.0.2
+Installed tools: present ping, dig, tc, ss, ethtool, python3, nc; missing iperf3, traceroute, tcpdump
+
+Saved to /mnt/e/Meta Project/system_summary.txt
+
+### 2-4. Generate script, approve, run
+Asking the model for a tool: 'find the largest MTU that works from ns1 to ns2'
+[warning] model reply cut off at max_tokens=8000
+[agent error] ValueError: model reply missing TYPE or code block
+
+##### took 130s

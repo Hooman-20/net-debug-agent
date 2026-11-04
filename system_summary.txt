@@ -1,6 +1,6 @@
-OS: Linux DESKTOP-QHG906B 6.6.87.2-microsoft-standard-WSL2 x86_64 GNU/Linux
-Interfaces: lo (mtu 65536, LOOPBACK,UP,LOWER_UP), veth1@if9 (mtu 1500, BROADCAST,MULTICAST,UP,LOWER_UP)
+OS: Linux DESKTOP-QHG906B 6.6.87.2-microsoft-standard-WSL2 #1 SMP PREEMPT_DYNAMIC Thu Jun 5 18:30:46 UTC 2025 x86_64 GNU/Linux
+Interfaces: lo mtu 65536 LOOPBACK,UP,LOWER_UP; veth1@if3 mtu 1500 BROADCAST,MULTICAST,UP,LOWER_UP
 IPs: lo 127.0.0.1/8, ::1/128; veth1 10.0.0.1/24, fe80::7ccb:94ff:fe67:ec3e/64
 Routes: 10.0.0.0/24 dev veth1 proto kernel scope link src 10.0.0.1
-DNS: nameserver 10.0.0.2
+DNS: nameserver 10.0.0.53
 Installed tools: present: ping, dig, tc, ss, ethtool, python3, nc; missing: iperf3, traceroute, tcpdump
